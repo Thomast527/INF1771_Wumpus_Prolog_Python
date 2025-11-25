@@ -375,7 +375,6 @@ executa_acao(explorer) :-
     assert(modo_explorer(true)),
     !.
 
-% Python doit alors appeler A*
 executa_acao(none) :-
     modo_explorer(true),
     !.

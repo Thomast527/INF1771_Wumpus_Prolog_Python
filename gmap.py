@@ -162,15 +162,15 @@ index_retorno = 0
 
 def direction_to_reach(direction_to_go):
     player_x, player_y, _ = player_pos
-    desired_direction_x, desired_direction_y = direction_to_go
+    desired_position_x, desired_position_y = direction_to_go
 
-    if desired_direction_x == player_x+1: 
+    if desired_position_x == player_x+1: 
         return "leste"
-    if desired_direction_x == player_x-1:
+    if desired_position_x == player_x-1:
         return "oeste"
-    if desired_direction_y == player_y+1: 
+    if desired_position_y == player_y+1: 
         return "norte"
-    if desired_direction_y == player_y-1: 
+    if desired_position_y == player_y-1: 
         return "sul"
     return None
 
