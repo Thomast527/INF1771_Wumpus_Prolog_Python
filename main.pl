@@ -6,7 +6,13 @@
 :-dynamic energia/1.
 :-dynamic pontuacao/1.
 
-:-consult('mapa.pl').
+:- dynamic ouro_coletado/0.   
+:- dynamic modo_explorer/1.
+modo_explorer(false).
+
+
+
+:-consult('mapa-facil.pl').
 
 delete([], _, []).
 delete([Elem|Tail], Del, Result) :-
@@ -60,46 +66,65 @@ verifica_player :- true.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %virar direita
-virar_direita :- posicao(X,Y, norte), retract(posicao(_,_,_)), assert(posicao(X, Y, leste)),atualiza_pontuacao(-1),!.
-virar_direita :- posicao(X,Y, oeste), retract(posicao(_,_,_)), assert(posicao(X, Y, norte)),atualiza_pontuacao(-1),!.
-virar_direita :- posicao(X,Y, sul), retract(posicao(_,_,_)), assert(posicao(X, Y, oeste)),atualiza_pontuacao(-1),!.
-virar_direita :- posicao(X,Y, leste), retract(posicao(_,_,_)), assert(posicao(X, Y, sul)),atualiza_pontuacao(-1),!.
+virar_direita :- posicao(X,Y, norte), retract(posicao(_,_,_)), assert(posicao(X, Y, leste)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_direita :- posicao(X,Y, oeste), retract(posicao(_,_,_)), assert(posicao(X, Y, norte)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_direita :- posicao(X,Y, sul), retract(posicao(_,_,_)), assert(posicao(X, Y, oeste)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_direita :- posicao(X,Y, leste), retract(posicao(_,_,_)), assert(posicao(X, Y, sul)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 
 %virar esquerda
-virar_esquerda :- posicao(X,Y, norte), retract(posicao(_,_,_)), assert(posicao(X, Y, oeste)),atualiza_pontuacao(-1),!.
-virar_esquerda :- posicao(X,Y, oeste), retract(posicao(_,_,_)), assert(posicao(X, Y, sul)),atualiza_pontuacao(-1),!.
-virar_esquerda :- posicao(X,Y, sul), retract(posicao(_,_,_)), assert(posicao(X, Y, leste)),atualiza_pontuacao(-1),!.
-virar_esquerda :- posicao(X,Y, leste), retract(posicao(_,_,_)), assert(posicao(X, Y, norte)),atualiza_pontuacao(-1),!.
+virar_esquerda :- posicao(X,Y, norte), retract(posicao(_,_,_)), assert(posicao(X, Y, oeste)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_esquerda :- posicao(X,Y, oeste), retract(posicao(_,_,_)), assert(posicao(X, Y, sul)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_esquerda :- posicao(X,Y, sul), retract(posicao(_,_,_)), assert(posicao(X, Y, leste)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
+virar_esquerda :- posicao(X,Y, leste), retract(posicao(_,_,_)), assert(posicao(X, Y, norte)),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 
 %andar
 andar :- posicao(X,Y,P), P = norte, map_size(_,MAX_Y), Y < MAX_Y, YY is Y + 1, 
          retract(posicao(X,Y,_)), assert(posicao(X, YY, P)), 
 		 %((retract(certeza(X,YY)), assert(certeza(X,YY))); assert(certeza(X,YY))),
 		 set_real(X,YY),
-		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1),!.
+		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 		 
 andar :- posicao(X,Y,P), P = sul,  Y > 1, YY is Y - 1, 
          retract(posicao(X,Y,_)), assert(posicao(X, YY, P)), 
 		 %((retract(certeza(X,YY)), assert(certeza(X,YY))); assert(certeza(X,YY))),
 		 set_real(X,YY),
-		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1),!.
+		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 
 andar :- posicao(X,Y,P), P = leste, map_size(MAX_X,_), X < MAX_X, XX is X + 1, 
          retract(posicao(X,Y,_)), assert(posicao(XX, Y, P)), 
 		 %((retract(certeza(XX,Y)), assert(certeza(XX,Y))); assert(certeza(XX,Y))),
 		 set_real(XX,Y),
-		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1),!.
+		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 
 andar :- posicao(X,Y,P), P = oeste,  X > 1, XX is X - 1, 
          retract(posicao(X,Y,_)), assert(posicao(XX, Y, P)), 
 		 %((retract(certeza(XX,Y)), assert(certeza(XX,Y))); assert(certeza(XX,Y))),
 		 set_real(XX,Y),
-		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1),!.
+		 ((retract(visitado(X,Y)), assert(visitado(X,Y))); assert(visitado(X,Y))),atualiza_pontuacao(-1), atualiza_energia(-1), !.
 		 
-%pegar	
-pegar :- posicao(X,Y,_), tile(X,Y,'O'), retract(tile(X,Y,'O')), assert(tile(X,Y,'')), atualiza_pontuacao(-5), atualiza_pontuacao(500),set_real(X,Y),!. 
-pegar :- posicao(X,Y,_), tile(X,Y,'U'), retract(tile(X,Y,'U')), assert(tile(X,Y,'')), atualiza_pontuacao(-5), atualiza_energia(50),set_real(X,Y),!. 
-pegar :- atualiza_pontuacao(-5),!.
+%pegar 
+pegar :-
+    posicao(X,Y,_),
+    tile(X,Y,'O'), !,
+    retract(tile(X,Y,'O')),
+    assert(tile(X,Y,'')),
+    atualiza_pontuacao(-5),
+    atualiza_pontuacao(500),
+    set_real(X,Y),
+    retractall(ouro_coletado),
+    assert(ouro_coletado).
+
+pegar :-
+    posicao(X,Y,_),
+    tile(X,Y,'U'), !,
+    retract(tile(X,Y,'U')),
+    assert(tile(X,Y,'')),
+    atualiza_pontuacao(-5),
+    atualiza_energia(50),
+    set_real(X,Y).
+
+pegar :-
+    atualiza_pontuacao(-5).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Funcoes Auxiliares de navegação e observação
@@ -174,7 +199,7 @@ observacao_vazia([]) :- !.
 observacao_vazia([H|T]) :- H=(X,Y), ((memory(X,Y,[]), \+certeza(X,Y),assert(certeza(X,Y)),!);true), observacao_vazia(T).
 
 %Quando posicao é visitada, atualiza memoria de posicao com a informação real do mapa 
-set_real(X,Y):- ((retract(certeza(X,Y)), assert(certeza(X,Y)),!); assert(certeza(X,Y))), set_real2(X,Y),!.
+set_real(X,Y):- set_real2(X,Y), !.
 set_real2(X,Y):- tile(X,Y,'P'), ((retract(memory(X,Y,_)),assert(memory(X,Y,[brisa])),!);assert(memory(X,Y,[brisa]))),!.
 set_real2(X,Y):- tile(X,Y,'O'), ((retract(memory(X,Y,_)),assert(memory(X,Y,[brilho])),!);assert(memory(X,Y,[brilho]))),!.
 set_real2(X,Y):- tile(X,Y,'T'), ((retract(memory(X,Y,_)),assert(memory(X,Y,[palmas])),!);assert(memory(X,Y,[palmas]))),!.
@@ -240,10 +265,16 @@ show_mem(_,0) :- energia(E), pontuacao(P), write('E: '), write(E), write('   P: 
 
 
 
+marquer_poco_certain(X,Y) :-
+    certeza(X,Y),
+    \+ memory(X,Y,_),
+    assertz(memory(X,Y,[poco])).
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %apagar esta linha - apenas para demonstracao aleatoria
-executa_acao(X) :- L=['virar_esquerda','virar_direita','andar','pegar'],random_between(1,4,I), nth1(I, L, X),!.
+%executa_acao(X) :- L=['virar_esquerda','virar_direita','andar','pegar'],random_between(1,4,I), nth1(I, L, X),!.
 
 %apagar linhas abaixo... sao exemplos de resposta
 %executa_acao(andar) :- posicao(PX, _, oeste), PX > 1, X = andar,!.
@@ -252,5 +283,168 @@ executa_acao(X) :- L=['virar_esquerda','virar_direita','andar','pegar'],random_b
 %executa_acao(voltar) :- peguei_todos_ouros,!.
 
 
+% We look for possible holes based on the presence of 'brisa' in the memory
+possible_hole(X,Y) :-
+    memory(X,Y,Obs),
+    member(brisa, Obs).
 
 
+% WE VERIFY IF THE AGENT CAN MOVE FORWARD SAFELY AND WITHOUT VISITING A PREVIOUS CELL
+can_move :-
+    posicao(X,Y,Dir),
+    tile_forward(X,Y,Dir,NX,NY),
+    \+ visitado(NX,NY),          % we avoid moving to a previously visited tile
+    \+ dangerous_tile(NX,NY),    % we avoid moving to a tile that is known to be dangerous
+    \+ possible_hole(NX,NY).     % we avoid moving to a tile that may have a hole
+	
+
+% WE VERIFY IF THE AGENT CAN ROTATE RIGHT IN ORDER TO MOVE TOWARDS IT SAFELY AND WITHOUT VISITING A PREVIOUS CELL
+can_rotate_right :-
+    posicao(X,Y,Dir),
+    tile_forward(X,Y,Dir, DX,DY),
+    visitado(DX,DY),
+    tile_right(X,Y,Dir, RX,RY),
+    \+ visitado(RX,RY),
+    \+ dangerous_tile(RX,RY),
+    \+ possible_hole(RX,RY).
+
+
+% WE VERIFY IF THE AGENT CAN ROTATE LEFT IN ORDER TO MOVE TOWARDS IT SAFELY AND WITHOUT VISITING A PREVIOUS CELL
+can_rotate_left :-
+    posicao(X,Y,Dir),
+    tile_forward(X,Y,Dir, DX,DY),
+    visitado(DX,DY),
+    tile_left(X,Y,Dir, GX,GY),
+    \+ visitado(GX,GY),
+    \+ dangerous_tile(GX,GY),
+    \+ possible_hole(GX,GY). 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% executa_acao
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% The most important action is to pick up gold
+executa_acao(pegar) :-
+    posicao(X,Y,_),
+    tile(X,Y,'O'),
+    !.
+
+% Second most important action is to pick up the energy boost
+executa_acao(pegar) :-
+    posicao(X,Y,_),
+    tile(X,Y,'U'),
+    !.
+
+% To ensure survival, if gold has been collected, the agent try to exit, it is the new highest priority
+executa_acao(retornar) :-
+    ouro_coletado,
+    !.
+
+% If the front is unvisited and safe, move forward
+executa_acao(andar) :-
+    can_move,
+    !.
+
+% Else if it is safe on the right we rotate to the right, we want the agent to move
+executa_acao(virar_direita) :-
+    can_rotate_right,
+    !.
+
+% Else if it is safe on the left we rotate to the left, we want the agent to move towards it
+executa_acao(virar_esquerda) :-
+    can_rotate_left,
+    !.
+
+executa_acao(andar) :-
+    posicao(X,Y,Dir),
+    tile_forward(X,Y,Dir,NX,NY),
+    \+ dangerous_tile(NX,NY),    % we avoid moving to a tile that is known to be dangerous
+    \+ possible_hole(NX,NY),     % we avoid moving to a tile that may have a hole
+    !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  EXPLORATION GLOBALE : PASSER LA MAIN A PYTHON   %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+executa_acao(explorer) :-
+    \+ can_move,
+    \+ can_rotate_right,
+    \+ can_rotate_left,
+    retractall(modo_explorer(_)),
+    assert(modo_explorer(true)),
+    !.
+
+% Python doit alors appeler A*
+executa_acao(none) :-
+    modo_explorer(true),
+    !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% In case everything fails, we just turn left
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+executa_acao(virar_esquerda).
+
+
+% --- Directions ---------------------------------------------------------
+
+tile_forward(X,Y,norte, X,NY) :- 
+    NY is Y+1, 
+    NY < 12.
+tile_forward(X,Y,sul,   X,NY) :- 
+    NY is Y-1, 
+    NY > 0.
+tile_forward(X,Y,leste, NX,Y) :- 
+    NX is X+1, 
+    NX < 12.
+tile_forward(X,Y,oeste, NX,Y) :- 
+    NX is X-1, 
+    NX > 0.
+
+tile_right(X,Y,norte, NX,NY) :- 
+    NX is X+1, 
+    NY is Y, 
+    NX < 12.
+tile_right(X,Y,sul,   NX,NY) :- 
+    NX is X-1, 
+    NY is Y, 
+    NX > 0.
+tile_right(X,Y,leste, NX,NY) :- 
+    NX is X,  
+    NY is Y-1, 
+    NY > 0.
+tile_right(X,Y,oeste, NX,NY) :- 
+    NX is X, 
+    NY is Y+1, 
+    NY < 12.
+
+tile_left(X,Y,norte, NX,NY) :- 
+    NX is X-1,
+    NY is Y,
+    NX > 0.
+tile_left(X,Y,sul,   NX,NY) :- 
+    NX is X+1, 
+    NY is Y, 
+    NX < 12.
+tile_left(X,Y,leste, NX,NY) :- 
+    NX is X,   
+    NY is Y+1, 
+    NY < 12.
+tile_left(X,Y,oeste, NX,NY) :- 
+    NX is X,   
+    NY is Y-1, 
+    NY > 0.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%  We verify in the memory if the tile is dangerous and if the information is sure %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+dangerous_tile(X,Y) :-
+    certeza(X,Y),               % We only consider tiles where we have certainty
+    memory(X,Y,Obs),            % We look for the observations in memory
+    (   member(passos,Obs);     % We know there is a monster
+        member(palmas,Obs);     % Or a bat
+        member(poco,Obs)       % Or a hole
+    ), 
+    !.

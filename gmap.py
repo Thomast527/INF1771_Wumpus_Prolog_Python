@@ -8,7 +8,7 @@ current_path = str(pathlib.Path().resolve())
 
 elapsed_time = 0
 auto_play_tempo = 0.5
-auto_play = False # desligar para controlar manualmente
+auto_play = True # desligar para controlar manualmente
 show_map = False
 
 scale = 60
@@ -18,7 +18,7 @@ width = size_x * scale  #Largura Janela
 height = size_y * scale #Altura Janela
 
 player_pos = (1,1,'norte')
-energia = 0
+energia = 100
 pontuacao = 0
 
 
@@ -37,6 +37,9 @@ mapa=[['','','','','','','','','','','',''],
 
 visitados = []
 certezas = []
+breezes = set() # store the positions of breezes
+
+
 
 pl_file = (current_path + '\\main.pl').replace('\\','/')
 prolog = Prolog()
@@ -44,25 +47,278 @@ prolog.consult(pl_file)
 
 last_action = ""
 
-def decisao():
 
-    acao = ""    
+import heapq
+
+def heuristic(a, b):
+    # Manhattan distance
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def neighbours(x, y):
+    moves = [(1,0), (-1,0), (0,1), (0,-1)] # right, left, up, down
+    for dx,dy in moves:
+        nx, ny = x+dx, y+dy 
+        if 1 <= nx <= 12 and 1 <= ny <= 12: # within bounds
+            yield (nx, ny) # return neighbor one by one if needed
+
+
+def risk_cost(position):
+    (x, y) = position
+    # retriverd memory from Prolog
+    memory = list(prolog.query(f"memory({x},{y},Z)"))
+    if memory:
+        # observations on this tile
+        obs = list(memory[0]['Z'])
+    else:
+        obs = []
+
+    # dangerous tile (passos/palmas)
+    if 'passos' in obs or 'palmas' in obs:
+        return float("inf")
+
+    # tile already visited is safe
+    if (x, y) in visitados:
+        return 0
+
+    # candidate pit tile
+    if 'brisa' in obs:
+        return 10_000   
+
+    # safe tile
+    return 1
+
+
+
+from TreeNode import TreeNode
+import heapq
+
+def astar(start, goal, forbid_brisa=False):
+
+    root = TreeNode(start, fx=heuristic(start, goal), gx=0)
+
+    open_list = []
+    heapq.heappush(open_list, root)
+
+    best_node = { start: 0 }
+
+    visited = set()
+
+    while open_list:
+
+        # We take the best node (lowest fx)
+        current_node = heapq.heappop(open_list)
+        current_node_x, current_node_y = current_node.get_coord()
+
+        # If we've reached the goal, we reconstruct path
+        if (current_node_x, current_node_y) == goal:
+            path = []
+            node = current_node
+            while node is not None:
+                path.append(node.get_coord())
+                node = node.get_parent()
+            return path[::-1]
+
+        if (current_node_x, current_node_y) in visited:
+            continue
+        visited.add((current_node_x, current_node_y))
+
+        for nx, ny in neighbours(current_node_x, current_node_y):
+
+            memory = list(prolog.query(f"memory({nx},{ny},Z)"))
+            observation = list(memory[0]['Z']) if memory else []
+
+            
+            if 'passos' in observation or 'palmas' in observation:
+                continue
+
+            if forbid_brisa and 'brisa' in observation:
+                continue
+
+            risk_cost_node = risk_cost((nx, ny))
+            if risk_cost_node == float("inf"):
+                continue
+
+            tentative_g = current_node.get_value_gx() + 1 + risk_cost_node
+
+            if (nx, ny) in best_node and tentative_g >= best_node[(nx, ny)]:
+                continue
+
+            best_node[(nx, ny)] = tentative_g
+
+            f = heuristic((nx, ny), goal)
+
+            child = TreeNode((nx, ny), fx=f, gx=tentative_g)
+            child.set_parent(current_node)
+
+            heapq.heappush(open_list, child)
+
+    return None
+
+
+
+caminho_retorno = []
+index_retorno = 0
+
+
+def direction_to_reach(direction_to_go):
+    player_x, player_y, _ = player_pos
+    desired_direction_x, desired_direction_y = direction_to_go
+
+    if desired_direction_x == player_x+1: 
+        return "leste"
+    if desired_direction_x == player_x-1:
+        return "oeste"
+    if desired_direction_y == player_y+1: 
+        return "norte"
+    if desired_direction_y == player_y-1: 
+        return "sul"
+    return None
+
+def turn_to(current_direction, desired_direction):
+    """return "virar_direita" or "virar_esquerda" to go from current_direction to desired_direction"""
+
+    directions_in_order = ["norte", "leste", "sul", "oeste"]
+    current_direction_index = directions_in_order.index(current_direction)
+    desired_direction_index = directions_in_order.index(desired_direction)
+
+    if (current_direction_index + 1) % 4 == desired_direction_index:
+        return "virar_direita"
+    else:
+        return "virar_esquerda"
     
+    
+def next_step():
+    global index_retorno, caminho_retorno
+
+    # end of path
+    if caminho_retorno is None or caminho_retorno == [] or index_retorno >= len(caminho_retorno):
+        return "sair"
+
+    player_x, player_y, player_dir = player_pos
+    next_pos = caminho_retorno[index_retorno]
+
+    if (player_x, player_y) == next_pos:
+        index_retorno += 1
+        return next_step()
+
+    desired_direction = direction_to_reach(next_pos)
+
+    if desired_direction != player_dir:
+        return turn_to(player_dir, desired_direction)
+
+    index_retorno += 1
+    return "andar"
+
+
+
+EXPLORATION_MODE = False
+current_path = [] 
+path_step_index = 0 # from A*
+
+def decisao():
+    global caminho_retorno, index_retorno
+
     acoes = list(prolog.query("executa_acao(X)"))
-    if len(acoes) > 0:
-        acao = acoes[0]['X']
+    print(acoes)
+
+    if not acoes:
+        return ""
+
+    acao = acoes[0]['X']
+
+
+    if acao == "retornar":
+        start = (player_pos[0], player_pos[1])
+        goal = (1,1)
+
+        caminho_retorno = astar(start, goal, forbid_brisa=True)
+        index_retorno = 0
+
+        if caminho_retorno:
+            return next_step()
+
+        caminho_retorno = astar(start, goal, forbid_brisa=False)
+        index_retorno = 0
+
+        if caminho_retorno:
+            return next_step()
+
+        return "virar_esquerda"
+
+
+    if acao == "explorer":
+        player_pos_x, player_pos_y, _ = player_pos
+
+        safe = [] 
+        unsafe = [] 
+
+        for y in range(1, 13):
+            for x in range(1,13):
+
+                if (x,y) == (player_pos_x,player_pos_y):
+                    continue
+                if (x,y) in visitados:
+                    continue
+
+                memory = list(prolog.query(f"memory({x},{y},Z)"))
+                if not memory:
+                    continue
+
+                observation = list(memory[0]['Z'])
+
+                if "passos" in observation or "palmas" in observation:
+                    continue    # dangerous
+
+                if "brisa" in observation:
+                    unsafe.append((x,y))
+                else:
+                    safe.append((x,y))
+
+
+        if safe:
+            start = (player_pos_x,player_pos_y)
+            target = min(safe, key=lambda c: heuristic(start,c))
+
+            caminho_retorno = astar(start, target, forbid_brisa=True)
+            index_retorno = 0
+
+            if caminho_retorno:
+                return next_step()
+
+
+            caminho_retorno = astar(start, target, forbid_brisa=False)
+            index_retorno = 0
+            return next_step()
+
+        if unsafe:
+            start = (player_pos_x,player_pos_y)
+            target = min(unsafe, key=lambda c: heuristic(start,c))
+
+
+            caminho_retorno = astar(start, target, forbid_brisa=False)
+            index_retorno = 0
+
+            if caminho_retorno:
+                return next_step()
+
+
+        return "virar_esquerda"
 
     return acao
 
 
 def exec_prolog(a):
     global last_action
+    if a == "sair":    # end of game
+        last_action = a
+        return
     if a != "":
         list(prolog.query(a))
     last_action = a
 
+
 def update_prolog():
-    global player_pos, mapa, energia, pontuacao,visitados, show_map
+    global player_pos, mapa, energia, pontuacao,visitados, show_map, breezes
 
     list(prolog.query("atualiza_obs, verifica_player"))
 
@@ -109,21 +365,33 @@ def update_prolog():
         z = Variable()    
         memory = Functor("memory", 3)
         memory_query = Query(memory(x,y,z))
+
+        breezes.clear()
+
         while memory_query.nextSolution():
-            for s in z.value:
-                
-                if str(s) == 'brisa':
-                    mapa[y.get_value()-1][x.get_value()-1] += 'P'
-                elif str(s) == 'palmas':
+
+            obs_list = list(z.value)  # liste des observations : ['brisa'], ['passos'], etc.
+
+            # --- 1) MARQUER LES BRISES POUR LE COÛT DE RISQUE ---
+            if "brisa" in obs_list:
+                breezes.add((x.value, y.value))
+
+            # --- 2) METTRE À JOUR LA CARTE (comme avant) ---
+            for s in obs_list:
+                s = str(s)
+                if s == 'palmas':
                     mapa[y.get_value()-1][x.get_value()-1] += 'T'
-                elif str(s) == 'passos':
+                elif s == 'passos':
                     mapa[y.get_value()-1][x.get_value()-1] += 'D'
-                elif str(s) == 'reflexo':
+                elif s == 'reflexo':
                     mapa[y.get_value()-1][x.get_value()-1] += 'U'
-                elif str(s) == 'brilho':
+                elif s == 'brilho':
                     mapa[y.get_value()-1][x.get_value()-1] += 'O'
-            
+                elif s == 'brisa':
+                    mapa[y.get_value()-1][x.get_value()-1] += 'P'
+
         memory_query.closeQuery()
+
 
     x = Variable()
     y = Variable()
